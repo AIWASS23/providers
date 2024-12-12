@@ -57,7 +57,6 @@ struct BreathingLeavesView: View {
                 child.entity.transform.rotation = rotationQuat
             }
             
-            // Rotate along all axis at different rates for a wonky roll effect
             rotationAngles.x += Float(frameDuration * 0.25)
             rotationAngles.y += Float(frameDuration * 0.15)
             rotationAngles.z += Float(frameDuration * 0.1)
@@ -87,15 +86,14 @@ struct EntityPositionPair {
 }
 
 extension EntityPositionPair {
-    static func getFibonacciLattice(entityCount: Int = 60,
-                                    boundingBox: SIMD3<Float>) throws -> [EntityPositionPair] {
+    static func getFibonacciLattice(entityCount: Int = 60, boundingBox: SIMD3<Float>) throws -> [EntityPositionPair] {
         
         let radius = boundingBox.z*0.45
         
         var entities = [EntityPositionPair]()
         for i in 0..<entityCount {
             let theta = acos(1 - 2 * Float(i + 1) / Float(entityCount + 1))
-            let phi = Float(i) * .pi * (1 + sqrt(5)) // Golden angle in radians
+            let phi = Float(i) * .pi * (1 + sqrt(5))
             
             let x = radius * sin(theta) * cos(phi)
             let y = radius * sin(theta) * sin(phi)
@@ -130,7 +128,6 @@ extension Entity {
         material.clearcoat = .init(floatLiteral: 0.5)
         material.clearcoatRoughness = .init(floatLiteral: 1.0)
         
-        // add some random red shaded emissive color
         if let cgImage = createRandomRedShadeNoiseImage(width: 50, height: 10),
            let texture = try? TextureResource(image: cgImage, options: .init(semantic: nil)) {
             material.emissiveColor = .init(texture: .init(texture))

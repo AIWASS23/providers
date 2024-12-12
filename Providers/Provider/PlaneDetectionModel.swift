@@ -81,7 +81,6 @@ class PlaneDetectionModel: ObservableObject {
         } else {
             let entity = Entity()
 
-            // Add a new entity to represent this plane.
             let material = UnlitMaterial(color: anchor.classification.color)
             let planeEntity = ModelEntity(mesh: .generatePlane(width: anchor.geometry.extent.width, height: anchor.geometry.extent.height), materials: [material])
             planeEntity.name = "plane"
@@ -94,7 +93,7 @@ class PlaneDetectionModel: ObservableObject {
         entityMap[anchor.id]?.transform = Transform(matrix: anchor.originFromAnchorTransform)
     }
 
-    private func removePlane(_ anchor: PlaneAnchor) {
+    func removePlane(_ anchor: PlaneAnchor) {
         entityMap[anchor.id]?.removeFromParent()
         entityMap.removeValue(forKey: anchor.id)
     }
