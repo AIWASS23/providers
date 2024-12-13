@@ -51,6 +51,18 @@ extension Entity {
         return descendents
     }
     
+    var forward: SIMD3<Float> {
+        forward(relativeTo: nil)
+    }
+    
+    
+    var visualExtents: SIMD3<Float> {
+        get {
+            let boundingBox = self.visualBounds(relativeTo: self)
+            return boundingBox.extents
+        }
+    }
+    
     subscript(parentMatching targetName: String) -> Entity? {
         if name.contains(targetName) {
             return self
@@ -62,6 +74,23 @@ extension Entity {
         
         return nextParent[parentMatching: targetName]
     }
+    
+    subscript(descendentMatching targetName: String) -> Entity? {
+        if name.contains(targetName) {
+            return self
+        }
+        
+        var match: Entity? = nil
+        for child in children {
+            match = child[descendentMatching: targetName]
+            if let match = match {
+                return match
+            }
+        }
+        
+        return match
+    }
+    
     
     func getParentHasPrefix(nameBeginsWith name: String) -> Entity? {
         if self.name.hasPrefix(name) {
@@ -85,22 +114,6 @@ extension Entity {
         return nextParent.getParentName(withName: name)
     }
     
-    subscript(descendentMatching targetName: String) -> Entity? {
-        if name.contains(targetName) {
-            return self
-        }
-        
-        var match: Entity? = nil
-        for child in children {
-            match = child[descendentMatching: targetName]
-            if let match = match {
-                return match
-            }
-        }
-        
-        return match
-    }
-    
     func getSelfOrDescendent(withName name: String) -> Entity? {
         if self.name == name {
             return self
@@ -120,10 +133,36 @@ extension Entity {
         normalize(convert(direction: SIMD3<Float>(0, 0, +1), to: referenceEntity))
     }
     
-    var forward: SIMD3<Float> {
-        forward(relativeTo: nil)
+    func scaleToFit(maxLength: Float = 1.0) {
+        let size = self.visualExtents
+        let longestEdge = max(max(size.x, size.y), size.z)
+        guard longestEdge != 0 else { return }
+        let scaleFactor = (maxLength / longestEdge) * 0.7
+        self.setScale([scaleFactor, scaleFactor, scaleFactor], relativeTo: nil)
+    }
+    
+    func centerWithinParent() {
+        let boundingBox = self.visualBounds(relativeTo: nil)
+        let modelCenter = (boundingBox.min + boundingBox.max) / 2
+        self.position = -modelCenter
+    }
+    
+    func scaleIn() {
+        var transformWithZeroScale = transform
+        transformWithZeroScale.scale = .zero
+        
+        if let animation = try? AnimationResource.generate(with: FromToByAnimation<Transform>(
+            from: transformWithZeroScale,
+            to: transform,
+            duration: 1.0,
+            bindTarget: .transform
+        )) {
+            playAnimation(animation)
+        }
     }
 }
+
+
 
 extension SIMD4 {
     var xyz: SIMD3<Scalar> {
@@ -152,12 +191,33 @@ extension GeometrySource {
             buffer.contents().advanced(by: offset + stride * Int($0)).assumingMemoryBound(to: T.self).pointee
         }
     }
-
+    
     @MainActor
     func asSIMD3<T>(ofType: T.Type) -> [SIMD3<T>] {
         return asArray(ofType: (T, T, T).self).map { .init($0.0, $0.1, $0.2) }
     }
 }
 
+extension MeshAnchor.Geometry {
+    
+    func classificationOf(faceWithIndex index: Int) -> MeshAnchor.MeshClassification {
+        guard let classification = self.classifications else { return .none }
+        assert(classification.format == MTLVertexFormat.uchar, "Expected one unsigned char (one byte) per classification")
+        let classificationPointer = classification.buffer.contents().advanced(by: classification.offset + (classification.stride * index))
+        let classificationValue = Int(classificationPointer.assumingMemoryBound(to: CUnsignedChar.self).pointee)
+        return MeshAnchor.MeshClassification(rawValue: classificationValue) ?? .none
+    }
+}
 
 
+extension MeshAnchor {
+    var boundingBox: BoundingBox {
+        get async {
+            await self.geometry.vertices.asSIMD3(ofType: Float.self).reduce(BoundingBox(), { return $0.union($1) })
+        }
+    }
+    
+//    var boundingBox: BoundingBox {
+//        self.geometry.vertices.asSIMD3(ofType: Float.self).reduce(BoundingBox(), { return $0.union($1) })
+//    }
+}
