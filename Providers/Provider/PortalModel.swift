@@ -51,9 +51,13 @@ class PortalModel: ObservableObject {
     func startDetectionTimer() {
         detectionTimer = Timer.scheduledTimer(withTimeInterval: detectionDuration, repeats: false) { [weak self] _ in
             guard let self = self else { return }
+            
             self.session.stop()
-            self.createPortal()
-            self.startAnimationTimer()
+            
+            Task { @MainActor in
+                self.createPortal()
+                self.startAnimationTimer()
+            }
         }
     }
 
@@ -94,10 +98,13 @@ class PortalModel: ObservableObject {
     private func startAnimationTimer() {
         animationTimer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: true) { [weak self] _ in
             guard let self = self else { return }
-            self.portalScale += Float(self.updateInterval / self.animationDuration)
-            if self.portalScale >= 1 {
-                self.portalScale = 1
-                self.stopAnimationTimer()
+            
+            Task {@MainActor in
+                self.portalScale += Float(self.updateInterval / self.animationDuration)
+                if self.portalScale >= 1 {
+                    self.portalScale = 1
+                    self.stopAnimationTimer()
+                }
             }
         }
     }

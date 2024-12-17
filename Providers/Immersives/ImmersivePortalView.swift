@@ -19,7 +19,7 @@ struct ImmersivePortalView: View {
             
             Task {
                 do {
-                    let cgImage = try await portal.loadImageFromAssets(named: "skybox")
+                    let cgImage = try portal.loadImageFromAssets(named: "skybox")
                     let texture = try await TextureResource(image: cgImage, options: .init(semantic: nil))
                     let entity = Entity()
                     let meshResource = MeshResource.generateSphere(radius: portal.skyboxRadius)
